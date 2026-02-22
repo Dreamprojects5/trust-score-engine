@@ -25,6 +25,8 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
   const [txSignature, setTxSignature] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showPopup, setShowPopup] = useState(false);
+  const [receivedAmount, setReceivedAmount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "history">("dashboard");
 
   const pledgeAmount = walletBalance > 0 && percentage ? (walletBalance * parseFloat(percentage || "0")) / 100 : 0;
 
@@ -85,12 +87,18 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
       const data = await res.json();
       setTxSignature(data.txSignature || data.transactionId || "");
       setTxStatus("success");
-      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount));
+      const returnPct = 0.8 + Math.random() * 0.1;
+      const received = parseFloat((pledgeAmount * returnPct).toFixed(4));
+      setReceivedAmount(received);
+      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount + received));
     } catch (err: any) {
       // Mock success for demo mode (backend unreachable)
       setTxSignature("DEMO_TX_" + Date.now());
       setTxStatus("success");
-      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount));
+      const returnPct = 0.8 + Math.random() * 0.1;
+      const received = parseFloat((pledgeAmount * returnPct).toFixed(4));
+      setReceivedAmount(received);
+      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount + received));
     }
   };
 
@@ -119,7 +127,21 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             <ArrowLeft className="w-4 h-4" />
             New Analysis
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 glass-card rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${activeTab === "dashboard" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${activeTab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Loan History
+              </button>
+            </div>
             <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
               <Wallet className="w-4 h-4 text-primary" />
               <span className="font-mono text-sm font-bold neon-text">
@@ -135,241 +157,190 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
           </div>
         </motion.div>
 
-        {/* Score hero */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className="glass-card neon-border rounded-2xl p-8 text-center space-y-4"
-        >
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center neon-border">
-                <span className="text-5xl font-display font-bold neon-text">{scoreValue}</span>
-              </div>
-              <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1.5">
-                <Shield className="w-4 h-4 text-primary-foreground" />
-              </div>
-            </div>
-          </div>
-          <h2 className="text-2xl font-display font-bold">On-Chain Trust Score</h2>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto">
-            Based on {metrics.transactionCount} on-chain transactions analyzed by Qwen3-235B
-          </p>
-        </motion.div>
-
-        {/* Metrics grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              icon: TrendingUp,
-              label: "Risk Level",
-              value: metrics.riskLevel,
-              valueClass: riskColor,
-            },
-            {
-              icon: Coins,
-              label: "Block Tier",
-              value: riskBlock.blockName,
-              valueClass: "text-primary",
-            },
-            {
-              icon: AlertTriangle,
-              label: "Factor Range",
-              value: riskBlock.factorRange,
-              valueClass: "text-neon-purple",
-            },
-          ].map((card, i) => (
+        {activeTab === "dashboard" ? (
+          <>
+            {/* Score hero */}
             <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 + i * 0.1 }}
-              className="glass-card rounded-xl p-5 space-y-3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className="glass-card neon-border rounded-2xl p-8 text-center space-y-4"
             >
-              <card.icon className="w-5 h-5 text-muted-foreground" />
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wide">
-                {card.label}
-              </p>
-              <p className={`text-xl font-display font-bold ${card.valueClass}`}>
-                {card.value}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center neon-border">
+                    <span className="text-5xl font-display font-bold neon-text">{scoreValue}</span>
+                  </div>
+                  <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1.5">
+                    <Shield className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                </div>
+              </div>
+              <h2 className="text-2xl font-display font-bold">On-Chain Trust Score</h2>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                Based on {metrics.transactionCount} on-chain transactions analyzed by Qwen3-235B
               </p>
             </motion.div>
-          ))}
-        </div>
 
-        {/* Eligible assets */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-          className="glass-card rounded-xl p-6 space-y-3"
-        >
-          <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-            Eligible Assets
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {riskBlock.eligibleAssets.split(", ").map((asset) => (
-              <span
-                key={asset}
-                className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-mono text-sm neon-border"
-              >
-                {asset}
-              </span>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">{riskBlock.note}</p>
-        </motion.div>
-
-        {/* Collateral returns table — selectable rows */}
-        {riskBlock.returns.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-            className="glass-card rounded-xl overflow-hidden"
-          >
-            <div className="p-5 border-b border-border">
-              <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                Projected Returns by Collateral
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">
-                Select a collateral to transfer funds
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    {["Collateral", "1M", "3M", "6M", "12M"].map((h) => (
-                      <th
-                        key={h}
-                        className="px-5 py-3 text-left font-mono text-xs text-muted-foreground uppercase"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {riskBlock.returns.map((row) => {
-                    const isSelected = selectedCollateral?.collateral === row.collateral;
-                    return (
-                      <tr
-                        key={row.collateral}
-                        onClick={() => handleRowSelect(row)}
-                        className={`border-b border-border/50 cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
-                            : "hover:bg-secondary/30"
-                        }`}
-                      >
-                        <td className="px-5 py-3 font-mono font-semibold text-primary flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full border-2 transition-colors ${
-                            isSelected ? "bg-primary border-primary" : "border-muted-foreground"
-                          }`} />
-                          {row.collateral}
-                        </td>
-                        <td className="px-5 py-3 font-mono">{row.oneMonth}</td>
-                        <td className="px-5 py-3 font-mono">{row.threeMonth}</td>
-                        <td className="px-5 py-3 font-mono">{row.sixMonth}</td>
-                        <td className="px-5 py-3 font-mono neon-text">{row.twelveMonth}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Transfer form — appears when a row is selected */}
-            <AnimatePresence>
-              {selectedCollateral && (
+            {/* Metrics grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { icon: TrendingUp, label: "Risk Level", value: metrics.riskLevel, valueClass: riskColor },
+                { icon: Coins, label: "Block Tier", value: riskBlock.blockName, valueClass: "text-primary" },
+                { icon: AlertTriangle, label: "Factor Range", value: riskBlock.factorRange, valueClass: "text-neon-purple" },
+              ].map((card, i) => (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden border-t border-border"
+                  key={card.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 + i * 0.1 }}
+                  className="glass-card rounded-xl p-5 space-y-3"
                 >
-                  <div className="p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Send className="w-4 h-4 text-primary" />
-                      <h4 className="font-display font-semibold text-sm">
-                        Request for Pledge <span className="neon-text">{selectedCollateral.collateral}</span>
-                      </h4>
-                    </div>
-
-                    {txStatus !== "success" && (
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-mono text-muted-foreground">
-                              Pledge Percentage
-                            </label>
-                            <span className="font-mono text-sm font-bold neon-text">{percentage || "0"}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={percentage || "0"}
-                            onChange={(e) => setPercentage(e.target.value)}
-                            disabled={txStatus === "sending"}
-                            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary accent-primary disabled:opacity-50"
-                          />
-                          <div className="flex justify-between mt-1">
-                            {[0, 25, 50, 75, 100].map((v) => (
-                              <button
-                                key={v}
-                                type="button"
-                                onClick={() => setPercentage(String(v))}
-                                disabled={txStatus === "sending"}
-                                className={`text-xs font-mono px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${
-                                  percentage === String(v)
-                                    ? "text-primary bg-primary/10"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                {v}%
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-mono text-muted-foreground mb-1">
-                            Amount (SOL)
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            value={pledgeAmount > 0 ? pledgeAmount.toFixed(4) : "—"}
-                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary/50 text-foreground font-mono text-sm cursor-default opacity-80"
-                          />
-                        </div>
-                        <div className="flex items-end">
-                          <button
-                            onClick={() => setShowPopup(true)}
-                            disabled={txStatus === "sending" || !percentage || pledgeAmount <= 0}
-                            className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Send className="w-4 h-4" />
-                            Request
-                          </button>
-                        </div>
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
+                  <card.icon className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wide">{card.label}</p>
+                  <p className={`text-xl font-display font-bold ${card.valueClass}`}>{card.value}</p>
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
+              ))}
+            </div>
 
-        {/* Transaction History */}
-        <TransactionHistory walletAddress={walletAddress} />
+            {/* Eligible assets */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="glass-card rounded-xl p-6 space-y-3"
+            >
+              <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">Eligible Assets</h3>
+              <div className="flex flex-wrap gap-2">
+                {riskBlock.eligibleAssets.split(", ").map((asset) => (
+                  <span key={asset} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-mono text-sm neon-border">{asset}</span>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">{riskBlock.note}</p>
+            </motion.div>
+
+            {/* Collateral returns table */}
+            {riskBlock.returns.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="glass-card rounded-xl overflow-hidden"
+              >
+                <div className="p-5 border-b border-border">
+                  <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">Projected Returns by Collateral</h3>
+                  <p className="text-xs text-muted-foreground mt-1 font-mono">Select a collateral to transfer funds</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        {["Collateral", "1M", "3M", "6M", "12M"].map((h) => (
+                          <th key={h} className="px-5 py-3 text-left font-mono text-xs text-muted-foreground uppercase">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {riskBlock.returns.map((row) => {
+                        const isSelected = selectedCollateral?.collateral === row.collateral;
+                        return (
+                          <tr
+                            key={row.collateral}
+                            onClick={() => handleRowSelect(row)}
+                            className={`border-b border-border/50 cursor-pointer transition-colors ${isSelected ? "bg-primary/10 ring-1 ring-inset ring-primary/30" : "hover:bg-secondary/30"}`}
+                          >
+                            <td className="px-5 py-3 font-mono font-semibold text-primary flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full border-2 transition-colors ${isSelected ? "bg-primary border-primary" : "border-muted-foreground"}`} />
+                              {row.collateral}
+                            </td>
+                            <td className="px-5 py-3 font-mono">{row.oneMonth}</td>
+                            <td className="px-5 py-3 font-mono">{row.threeMonth}</td>
+                            <td className="px-5 py-3 font-mono">{row.sixMonth}</td>
+                            <td className="px-5 py-3 font-mono neon-text">{row.twelveMonth}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Transfer form */}
+                <AnimatePresence>
+                  {selectedCollateral && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-t border-border"
+                    >
+                      <div className="p-5 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Send className="w-4 h-4 text-primary" />
+                          <h4 className="font-display font-semibold text-sm">
+                            Request for Pledge <span className="neon-text">{selectedCollateral.collateral}</span>
+                          </h4>
+                        </div>
+
+                        {txStatus !== "success" && (
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-mono text-muted-foreground">Pledge Percentage</label>
+                                <span className="font-mono text-sm font-bold neon-text">{percentage || "0"}%</span>
+                              </div>
+                              <input
+                                type="range" min="0" max="100" step="1"
+                                value={percentage || "0"}
+                                onChange={(e) => setPercentage(e.target.value)}
+                                disabled={txStatus === "sending"}
+                                className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary accent-primary disabled:opacity-50"
+                              />
+                              <div className="flex justify-between mt-1">
+                                {[0, 25, 50, 75, 100].map((v) => (
+                                  <button
+                                    key={v} type="button"
+                                    onClick={() => setPercentage(String(v))}
+                                    disabled={txStatus === "sending"}
+                                    className={`text-xs font-mono px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${percentage === String(v) ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+                                  >
+                                    {v}%
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-mono text-muted-foreground mb-1">Amount (SOL)</label>
+                                <input
+                                  type="text" readOnly
+                                  value={pledgeAmount > 0 ? pledgeAmount.toFixed(4) : "—"}
+                                  className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary/50 text-foreground font-mono text-sm cursor-default opacity-80"
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <button
+                                  onClick={() => setShowPopup(true)}
+                                  disabled={txStatus === "sending" || !percentage || pledgeAmount <= 0}
+                                  className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Send className="w-4 h-4" />
+                                  Request
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </>
+        ) : (
+          /* Loan History tab */
+          <TransactionHistory walletAddress={walletAddress} />
+        )}
       </div>
 
       {/* Confirmation Popup */}
@@ -393,11 +364,18 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                 <div className="text-center space-y-4 py-4">
                   <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
                   <h3 className="font-display text-xl font-bold">Request Successful!</h3>
-                  <p className="font-mono text-sm text-muted-foreground">
-                    {pledgeAmount.toFixed(4)} SOL has been added to your wallet.
-                  </p>
+                  <div className="glass-card rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-mono text-muted-foreground">Pledged</span>
+                      <span className="font-mono text-sm font-bold text-destructive">-{pledgeAmount.toFixed(4)} SOL</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-mono text-muted-foreground">Received</span>
+                      <span className="font-mono text-sm font-bold neon-text">+{receivedAmount.toFixed(4)} SOL</span>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Your pledge of {pledgeAmount.toFixed(4)} SOL in {selectedCollateral?.collateral} has been transferred into our protocol's treasury.
+                    You received <span className="text-primary font-semibold">{receivedAmount.toFixed(4)} SOL</span> ({((receivedAmount / pledgeAmount) * 100).toFixed(1)}% of pledge) in {selectedCollateral?.collateral}.
                   </p>
                   {txSignature && (
                     <a
