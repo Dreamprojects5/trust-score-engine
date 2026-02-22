@@ -6,9 +6,10 @@ import { NETWORK } from "@/lib/solana";
 
 interface Props {
   walletAddress: string;
+  title?: string;
 }
 
-export default function TransactionHistory({ walletAddress }: Props) {
+export default function TransactionHistory({ walletAddress, title = "Transaction History" }: Props) {
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +60,7 @@ export default function TransactionHistory({ walletAddress }: Props) {
       <div className="p-5 border-b border-border flex items-center gap-2">
         <History className="w-4 h-4 text-muted-foreground" />
         <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-          Transaction History
+          {title}
         </h3>
       </div>
 

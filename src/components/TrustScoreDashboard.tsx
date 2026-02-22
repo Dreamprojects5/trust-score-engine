@@ -344,7 +344,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             )}
           </>
         ) : activeTab === "loans" ? (
-          <TransactionHistory walletAddress={walletAddress} />
+          <TransactionHistory walletAddress={walletAddress} title="Loan History" />
         ) : (
           <TransactionHistory walletAddress={walletAddress} />
         )}
