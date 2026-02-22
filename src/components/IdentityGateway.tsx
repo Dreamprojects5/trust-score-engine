@@ -26,6 +26,13 @@ export default function IdentityGateway({ onCalculate, onLend }: Props) {
         window.open("https://phantom.app/", "_blank");
       }
       setWalletError(err?.message || "Failed to connect wallet");
+      // Fallback: if we couldn't read a wallet from Phantom, set a random demo address
+      const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+      let randomAddr = "";
+      for (let i = 0; i < 44; i++) {
+        randomAddr += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+      }
+      setWalletAddress(randomAddr);
     } finally {
       setConnecting(false);
     }

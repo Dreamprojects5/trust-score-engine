@@ -1,25 +1,27 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle2, Loader2, XCircle, ExternalLink, History } from "lucide-react";
-import { fetchTransactionHistory, MOCK_TRANSACTION_HISTORY, type TransactionRecord } from "@/lib/api";
+import { fetchTransactionHistory, fetchWalletOrders, MOCK_TRANSACTION_HISTORY, type TransactionRecord } from "@/lib/api";
 import { NETWORK } from "@/lib/solana";
 
 interface Props {
   walletAddress: string;
   title?: string;
+  apiType?: "transactions" | "orders";
 }
 
-export default function TransactionHistory({ walletAddress, title = "Transaction History" }: Props) {
+export default function TransactionHistory({ walletAddress, title = "Transaction History", apiType = "orders" }: Props) {
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetchTransactionHistory(walletAddress)
+    const fetchFn = apiType === "orders" ? fetchWalletOrders : fetchTransactionHistory;
+    fetchFn(walletAddress)
       .then(setTransactions)
       .catch(() => setTransactions(MOCK_TRANSACTION_HISTORY))
       .finally(() => setLoading(false));
-  }, [walletAddress]);
+  }, [walletAddress, apiType]);
 
   const statusIcon = (status: TransactionRecord["status"]) => {
     switch (status) {
@@ -43,11 +45,15 @@ export default function TransactionHistory({ walletAddress, title = "Transaction
     }
   };
 
-  const formatDate = (iso: string) => {
+  const formatDate = (iso?: string | null) => {
+    if (!iso) return "";
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    if (isNaN(d.getTime())) return iso;
+    return (
+      d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
       " · " +
-      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   return (
@@ -89,7 +95,7 @@ export default function TransactionHistory({ walletAddress, title = "Transaction
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx, i) => (
+              {(Array.isArray(transactions) ? transactions : []).map((tx, i) => (
                 <motion.tr
                   key={tx.id}
                   initial={{ opacity: 0, x: -10 }}

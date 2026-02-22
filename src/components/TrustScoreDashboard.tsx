@@ -14,7 +14,8 @@ interface Props {
 
 type TxStatus = "idle" | "sending" | "success" | "error";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "http://localhost:3000";
+const BASE = "http://localhost:8082";
 
 export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock, onReset }: Props) {
   const [selectedCollateral, setSelectedCollateral] = useState<CollateralReturn | null>(null);
@@ -73,11 +74,11 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
     setTxStatus("sending");
     setErrorMsg("");
     try {
-      const res = await fetch(`${API_BASE}/api/wallet/transactions`, {
+      const res = await fetch(`${API_BASE}/build-transfer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          walletAddress,
+          fromWallet:walletAddress,
           collateral: selectedCollateral?.collateral,
           percentage: pct,
           amount: pledgeAmount,
@@ -86,6 +87,23 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       setTxSignature(data.txSignature || data.transactionId || "");
+      
+      // Call /api/wallet/transactions after successful build-transfer
+      try {
+        await fetch(`${BASE}/api/wallet/transactions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fromWallet: walletAddress,
+            amount: pledgeAmount,
+            riskProfile: metrics.riskLevel,
+            interestRate: parseFloat(selectedCollateral?.oneMonth || "0"),
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to log transaction:", err);
+      }
+      
       setTxStatus("success");
       const returnPct = 0.8 + Math.random() * 0.1;
       const received = parseFloat((pledgeAmount * returnPct).toFixed(4));
@@ -344,9 +362,9 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             )}
           </>
         ) : activeTab === "loans" ? (
-          <TransactionHistory walletAddress={walletAddress} title="Loan History" />
+          <TransactionHistory walletAddress={walletAddress} title="Loan History" apiType="orders" />
         ) : (
-          <TransactionHistory walletAddress={walletAddress} />
+          <TransactionHistory walletAddress={walletAddress} apiType="transactions" />
         )}
       </div>
 

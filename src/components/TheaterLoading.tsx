@@ -19,6 +19,11 @@ const STEPS: Step[] = [
 ];
 
 interface Props {
+  githubUrl?: string;
+  onComplete: () => void;
+}
+
+interface Props {
   onComplete: () => void;
 }
 
@@ -56,7 +61,7 @@ export default function TheaterLoading({ onComplete }: Props) {
         >
           <Terminal className="w-5 h-5 text-primary" />
           <span className="font-mono text-sm text-primary">
-            trustscore_engine v2.1.0
+            trustscore_engine v1.0.0 — initializing analysis
           </span>
           <span className="animate-blink font-mono text-primary">█</span>
         </motion.div>

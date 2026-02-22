@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8080";
+const API_BASE = "http://localhost:8082";
 
 export interface WalletMetrics {
   transactionCount: number;
@@ -44,10 +44,74 @@ export async function fetchRiskBlock(profile: "LOW" | "MEDIUM" | "HIGH"): Promis
 }
 
 export async function fetchTransactionHistory(address: string): Promise<TransactionRecord[]> {
-  const res = await fetch(`${API_BASE}/api/wallet/${address}/transactions`);
+  const res = await fetch(`http://localhost:8082/api/wallet/orders?address=${address}`);
   if (!res.ok) throw new Error("Failed to fetch transaction history");
   const data = await res.json();
-  return data.transactions || data;
+  const raw = data.transactions || data;
+  if (!Array.isArray(raw)) return [];
+  return normalizeRecords(raw);
+}
+
+export async function fetchWalletOrders(address: string): Promise<TransactionRecord[]> {
+  const res = await fetch(`http://localhost:8082/api/wallet/orders?address=${address}`);
+  if (!res.ok) throw new Error("Failed to fetch wallet orders");
+  const data = await res.json();
+  const result = data.orders || data.transactions || data;
+  if (!Array.isArray(result)) return [];
+  return normalizeRecords(result);
+}
+
+// Normalize backend records to the client TransactionRecord shape
+function normalizeRecords(items: any[]): TransactionRecord[] {
+  return items.map((it) => {
+    // backend may use `createdAt`, `fromWalletAddress`, `interestRate`, `riskProfile`
+    const date = it.date || it.createdAt || null;
+    const collateral = it.collateral || "SOL";
+    const percentage = (it.percentage ?? it.interestRate ?? 0) as number;
+    const amount = typeof it.amount === "number" ? it.amount : parseFloat(it.amount || "0");
+    const status = (it.status as any) || (amount > 0 ? "completed" : "pending");
+    return {
+      id: it.id?.toString?.() ?? String(Math.random()),
+      date,
+      collateral,
+      percentage,
+      amount,
+      status,
+      txSignature: it.txSignature,
+    } as TransactionRecord;
+  });
+}
+
+export async function postWalletTransactions(requestData: { fromWallet: string; amount: string; riskProfile: string; interestRate: number; }): Promise<TransactionRecord[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    // Convert amount to lamports (integer)
+    const amountNum = parseFloat(requestData.amount);
+    const amountLamports = Math.floor(amountNum * 1e9);
+    
+    const res = await fetch(`/build-transfer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...requestData,
+        amount: amountLamports.toString(),
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error('Failed to fetch wallet transactions');
+    const data = await res.json();
+    return data.transactions || data;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      return MOCK_TRANSACTION_HISTORY;
+    }
+    throw err;
+  }
 }
 
 // Mock fallbacks for demo when backend is unavailable
@@ -73,4 +137,5 @@ export const MOCK_TRANSACTION_HISTORY: TransactionRecord[] = [
   { id: "2", date: "2026-02-19T09:15:00Z", collateral: "mSOL", percentage: 50, amount: 5.0, status: "completed", txSignature: "3kR...def" },
   { id: "3", date: "2026-02-18T16:45:00Z", collateral: "USDC", percentage: 10, amount: 1.0, status: "pending" },
   { id: "4", date: "2026-02-17T11:20:00Z", collateral: "SOL", percentage: 75, amount: 7.5, status: "failed" },
+  { id: "5", date: "2026-02-16T10:00:00Z", collateral: "USDC", percentage: 20, amount: 2.0, status: "completed" },
 ];
