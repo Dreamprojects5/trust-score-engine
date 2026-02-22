@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "lucide-react";
 import type { WalletMetrics, RiskBlockResponse, CollateralReturn } from "@/lib/api";
-import { sendSol, NETWORK } from "@/lib/solana";
+import { getBalance, NETWORK } from "@/lib/solana";
 
 interface Props {
   walletAddress: string;
@@ -13,13 +13,21 @@ interface Props {
 
 type TxStatus = "idle" | "sending" | "success" | "error";
 
+const API_BASE = "http://localhost:8080";
+
 export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock, onReset }: Props) {
   const [selectedCollateral, setSelectedCollateral] = useState<CollateralReturn | null>(null);
-  const [amount, setAmount] = useState("");
-  const [recipientAddress, setRecipientAddress] = useState("");
+  const [percentage, setPercentage] = useState("");
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [txStatus, setTxStatus] = useState<TxStatus>("idle");
   const [txSignature, setTxSignature] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const pledgeAmount = walletBalance > 0 && percentage ? (walletBalance * parseFloat(percentage || "0")) / 100 : 0;
+
+  useEffect(() => {
+    getBalance(walletAddress).then(setWalletBalance).catch(() => setWalletBalance(0));
+  }, [walletAddress]);
 
   const riskColor =
     metrics.riskLevel === "LOW"
@@ -39,20 +47,15 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
       setTxStatus("idle");
       setTxSignature("");
       setErrorMsg("");
-      setAmount("");
+      setPercentage("");
     }
   };
 
-  const handleTransfer = async () => {
-    if (!amount || !recipientAddress) return;
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setErrorMsg("Enter a valid amount");
-      setTxStatus("error");
-      return;
-    }
-    if (recipientAddress.length < 32) {
-      setErrorMsg("Enter a valid Solana address");
+  const handleRequest = async () => {
+    if (!percentage || pledgeAmount <= 0) return;
+    const pct = parseFloat(percentage);
+    if (isNaN(pct) || pct <= 0 || pct > 100) {
+      setErrorMsg("Enter a valid percentage (1-100)");
       setTxStatus("error");
       return;
     }
@@ -60,11 +63,22 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
     setTxStatus("sending");
     setErrorMsg("");
     try {
-      const sig = await sendSol(recipientAddress, amountNum);
-      setTxSignature(sig);
+      const res = await fetch(`${API_BASE}/api/wallet/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+          collateral: selectedCollateral?.collateral,
+          percentage: pct,
+          amount: pledgeAmount,
+        }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setTxSignature(data.txSignature || data.transactionId || "");
       setTxStatus("success");
     } catch (err: any) {
-      setErrorMsg(err?.message || "Transaction failed");
+      setErrorMsg(err?.message || "Request failed");
       setTxStatus("error");
     }
   };
@@ -271,31 +285,36 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                         animate={{ opacity: 1 }}
                         className="text-center py-4 space-y-3"
                       >
-                        <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
+                      <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
                         <p className="font-display font-semibold">
-                          {amount} SOL transferred!
+                          {pledgeAmount.toFixed(4)} SOL pledged!
                         </p>
-                        <a
-                          href={explorerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-mono"
-                        >
-                          View on Solana Explorer
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        {txSignature && (
+                          <a
+                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=${NETWORK}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-mono"
+                          >
+                            View on Solana Explorer
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
                       </motion.div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs font-mono text-muted-foreground mb-1">
-                            Recipient Address
+                            Pledge Percentage (%)
                           </label>
                           <input
-                            type="text"
-                            value={recipientAddress}
-                            onChange={(e) => setRecipientAddress(e.target.value)}
-                            placeholder="Solana wallet address"
+                            type="number"
+                            step="1"
+                            min="1"
+                            max="100"
+                            value={percentage}
+                            onChange={(e) => setPercentage(e.target.value)}
+                            placeholder="e.g. 25"
                             disabled={txStatus === "sending"}
                             className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
                           />
@@ -305,31 +324,27 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                             Amount (SOL)
                           </label>
                           <input
-                            type="number"
-                            step="0.001"
-                            min="0"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="0.00"
-                            disabled={txStatus === "sending"}
-                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                            type="text"
+                            readOnly
+                            value={pledgeAmount > 0 ? pledgeAmount.toFixed(4) : "—"}
+                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary/50 text-foreground font-mono text-sm cursor-default opacity-80"
                           />
                         </div>
                         <div className="flex items-end">
                           <button
-                            onClick={handleTransfer}
-                            disabled={txStatus === "sending" || !recipientAddress || !amount}
+                            onClick={handleRequest}
+                            disabled={txStatus === "sending" || !percentage || pledgeAmount <= 0}
                             className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {txStatus === "sending" ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Sending...
+                                Requesting...
                               </>
                             ) : (
                               <>
                                 <Send className="w-4 h-4" />
-                                Transfer
+                                Request
                               </>
                             )}
                           </button>
