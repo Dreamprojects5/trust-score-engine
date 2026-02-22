@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send } from "lucide-react";
 import type { WalletMetrics, RiskBlockResponse } from "@/lib/api";
+import SendTransaction from "@/components/SendTransaction";
 
 interface Props {
   walletAddress: string;
@@ -10,6 +12,8 @@ interface Props {
 }
 
 export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock, onReset }: Props) {
+  const [sendOpen, setSendOpen] = useState(false);
+
   const riskColor =
     metrics.riskLevel === "LOW"
       ? "text-primary"
@@ -41,11 +45,20 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             <ArrowLeft className="w-4 h-4" />
             New Analysis
           </button>
-          <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
-            <span className="font-mono text-xs text-primary">
-              {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSendOpen(true)}
+              className="neon-glow-btn font-display font-semibold text-sm px-4 py-2 rounded-lg inline-flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Send SOL
+            </button>
+            <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
+              <span className="font-mono text-xs text-primary">
+                {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+              </span>
+            </div>
           </div>
         </motion.div>
 
@@ -180,6 +193,12 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
           </motion.div>
         )}
       </div>
+
+      <SendTransaction
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        walletAddress={walletAddress}
+      />
     </motion.div>
   );
 }
