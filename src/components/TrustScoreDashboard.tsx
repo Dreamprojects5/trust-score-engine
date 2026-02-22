@@ -85,10 +85,12 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
       const data = await res.json();
       setTxSignature(data.txSignature || data.transactionId || "");
       setTxStatus("success");
+      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount));
     } catch (err: any) {
       // Mock success for demo mode (backend unreachable)
       setTxSignature("DEMO_TX_" + Date.now());
       setTxStatus("success");
+      setWalletBalance((prev) => Math.max(0, prev - pledgeAmount));
     }
   };
 
