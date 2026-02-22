@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle, Wallet } from "lucide-react";
+import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle, Wallet, X } from "lucide-react";
 import type { WalletMetrics, RiskBlockResponse, CollateralReturn } from "@/lib/api";
 import { getBalance, NETWORK } from "@/lib/solana";
 import TransactionHistory from "@/components/TransactionHistory";
@@ -23,6 +23,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
   const [txStatus, setTxStatus] = useState<TxStatus>("idle");
   const [txSignature, setTxSignature] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
 
   const pledgeAmount = walletBalance > 0 && percentage ? (walletBalance * parseFloat(percentage || "0")) / 100 : 0;
 
@@ -288,29 +289,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                       </h4>
                     </div>
 
-                    {txStatus === "success" ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center py-4 space-y-3"
-                      >
-                      <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
-                        <p className="font-display font-semibold">
-                          {pledgeAmount.toFixed(4)} SOL pledged!
-                        </p>
-                        {txSignature && (
-                          <a
-                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=${NETWORK}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-mono"
-                          >
-                            View on Solana Explorer
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </motion.div>
-                    ) : (
+                    {txStatus !== "success" && (
                       <div className="space-y-4">
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -361,33 +340,18 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                         </div>
                         <div className="flex items-end">
                           <button
-                            onClick={handleRequest}
+                            onClick={() => setShowPopup(true)}
                             disabled={txStatus === "sending" || !percentage || pledgeAmount <= 0}
                             className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {txStatus === "sending" ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Requesting...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-4 h-4" />
-                                Request
-                              </>
-                            )}
+                            <Send className="w-4 h-4" />
+                            Request
                           </button>
                         </div>
                         </div>
                       </div>
                     )}
 
-                    {txStatus === "error" && (
-                      <div className="flex items-center gap-2 text-destructive text-sm font-mono">
-                        <AlertCircle className="w-4 h-4" />
-                        {errorMsg}
-                      </div>
-                    )}
                   </div>
                 </motion.div>
               )}
@@ -398,6 +362,113 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
         {/* Transaction History */}
         <TransactionHistory walletAddress={walletAddress} />
       </div>
+
+      {/* Confirmation Popup */}
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => txStatus !== "sending" && setShowPopup(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card neon-border rounded-2xl p-6 w-full max-w-md space-y-5"
+            >
+              {txStatus === "success" ? (
+                <div className="text-center space-y-4 py-4">
+                  <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
+                  <h3 className="font-display text-xl font-bold">Request Successful!</h3>
+                  <p className="font-mono text-sm text-muted-foreground">
+                    {pledgeAmount.toFixed(4)} SOL of {selectedCollateral?.collateral} pledged
+                  </p>
+                  {txSignature && (
+                    <a
+                      href={`https://explorer.solana.com/tx/${txSignature}?cluster=${NETWORK}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-mono"
+                    >
+                      View on Solana Explorer
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => { setShowPopup(false); setTxStatus("idle"); setPercentage(""); }}
+                    className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg mt-2"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-lg font-bold">Confirm Request</h3>
+                    <button
+                      onClick={() => setShowPopup(false)}
+                      disabled={txStatus === "sending"}
+                      className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-border/50">
+                      <span className="text-xs font-mono text-muted-foreground uppercase">Collateral</span>
+                      <span className="font-mono font-semibold text-primary">{selectedCollateral?.collateral}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/50">
+                      <span className="text-xs font-mono text-muted-foreground uppercase">Pledge</span>
+                      <span className="font-mono font-bold neon-text">{percentage}%</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-border/50">
+                      <span className="text-xs font-mono text-muted-foreground uppercase">Amount</span>
+                      <span className="font-mono font-bold neon-text">{pledgeAmount.toFixed(4)} SOL</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-xs font-mono text-muted-foreground uppercase">Wallet</span>
+                      <span className="font-mono text-xs text-primary">
+                        {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {txStatus === "error" && (
+                    <div className="flex items-center gap-2 text-destructive text-sm font-mono bg-destructive/10 rounded-lg p-3">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleRequest}
+                    disabled={txStatus === "sending"}
+                    className="w-full neon-glow-btn font-display font-semibold px-4 py-3 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {txStatus === "sending" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Confirm & Request
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
