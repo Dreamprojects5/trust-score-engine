@@ -291,7 +291,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                     <div className="flex items-center gap-2">
                       <Send className="w-4 h-4 text-primary" />
                       <h4 className="font-display font-semibold text-sm">
-                        Transfer <span className="neon-text">{selectedCollateral.collateral}</span>
+                        Request for Pledge <span className="neon-text">{selectedCollateral.collateral}</span>
                       </h4>
                     </div>
 
