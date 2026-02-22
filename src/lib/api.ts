@@ -5,6 +5,16 @@ export interface WalletMetrics {
   riskLevel: string;
 }
 
+export interface TransactionRecord {
+  id: string;
+  date: string;
+  collateral: string;
+  percentage: number;
+  amount: number;
+  status: "completed" | "pending" | "failed";
+  txSignature?: string;
+}
+
 export interface RiskBlockResponse {
   blockName: string;
   factorRange: string;
@@ -33,6 +43,13 @@ export async function fetchRiskBlock(profile: "LOW" | "MEDIUM" | "HIGH"): Promis
   return res.json();
 }
 
+export async function fetchTransactionHistory(address: string): Promise<TransactionRecord[]> {
+  const res = await fetch(`${API_BASE}/api/wallet/${address}/transactions`);
+  if (!res.ok) throw new Error("Failed to fetch transaction history");
+  const data = await res.json();
+  return data.transactions || data;
+}
+
 // Mock fallbacks for demo when backend is unavailable
 export const MOCK_WALLET_METRICS: WalletMetrics = {
   transactionCount: 847,
@@ -50,3 +67,10 @@ export const MOCK_RISK_BLOCK: RiskBlockResponse = {
     { collateral: "USDC", oneMonth: "1.2%", threeMonth: "3.6%", sixMonth: "7.4%", twelveMonth: "15.1%" },
   ],
 };
+
+export const MOCK_TRANSACTION_HISTORY: TransactionRecord[] = [
+  { id: "1", date: "2026-02-20T14:32:00Z", collateral: "SOL", percentage: 25, amount: 2.5, status: "completed", txSignature: "5xG...abc" },
+  { id: "2", date: "2026-02-19T09:15:00Z", collateral: "mSOL", percentage: 50, amount: 5.0, status: "completed", txSignature: "3kR...def" },
+  { id: "3", date: "2026-02-18T16:45:00Z", collateral: "USDC", percentage: 10, amount: 1.0, status: "pending" },
+  { id: "4", date: "2026-02-17T11:20:00Z", collateral: "SOL", percentage: 75, amount: 7.5, status: "failed" },
+];

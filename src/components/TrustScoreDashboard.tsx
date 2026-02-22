@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle, Wallet } from "lucide-react";
 import type { WalletMetrics, RiskBlockResponse, CollateralReturn } from "@/lib/api";
 import { getBalance, NETWORK } from "@/lib/solana";
+import TransactionHistory from "@/components/TransactionHistory";
 
 interface Props {
   walletAddress: string;
@@ -393,6 +394,9 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             </AnimatePresence>
           </motion.div>
         )}
+
+        {/* Transaction History */}
+        <TransactionHistory walletAddress={walletAddress} />
       </div>
     </motion.div>
   );
