@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send } from "lucide-react";
-import type { WalletMetrics, RiskBlockResponse } from "@/lib/api";
-import SendTransaction from "@/components/SendTransaction";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "lucide-react";
+import type { WalletMetrics, RiskBlockResponse, CollateralReturn } from "@/lib/api";
+import { sendSol, NETWORK } from "@/lib/solana";
 
 interface Props {
   walletAddress: string;
@@ -11,8 +11,15 @@ interface Props {
   onReset: () => void;
 }
 
+type TxStatus = "idle" | "sending" | "success" | "error";
+
 export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock, onReset }: Props) {
-  const [sendOpen, setSendOpen] = useState(false);
+  const [selectedCollateral, setSelectedCollateral] = useState<CollateralReturn | null>(null);
+  const [amount, setAmount] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [txStatus, setTxStatus] = useState<TxStatus>("idle");
+  const [txSignature, setTxSignature] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const riskColor =
     metrics.riskLevel === "LOW"
@@ -23,6 +30,48 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
 
   const scoreValue =
     metrics.riskLevel === "LOW" ? 92 : metrics.riskLevel === "MEDIUM" ? 71 : 38;
+
+  const handleRowSelect = (row: CollateralReturn) => {
+    if (selectedCollateral?.collateral === row.collateral) {
+      setSelectedCollateral(null);
+    } else {
+      setSelectedCollateral(row);
+      setTxStatus("idle");
+      setTxSignature("");
+      setErrorMsg("");
+      setAmount("");
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!amount || !recipientAddress) return;
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setErrorMsg("Enter a valid amount");
+      setTxStatus("error");
+      return;
+    }
+    if (recipientAddress.length < 32) {
+      setErrorMsg("Enter a valid Solana address");
+      setTxStatus("error");
+      return;
+    }
+
+    setTxStatus("sending");
+    setErrorMsg("");
+    try {
+      const sig = await sendSol(recipientAddress, amountNum);
+      setTxSignature(sig);
+      setTxStatus("success");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Transaction failed");
+      setTxStatus("error");
+    }
+  };
+
+  const explorerUrl = txSignature
+    ? `https://explorer.solana.com/tx/${txSignature}?cluster=${NETWORK}`
+    : "";
 
   return (
     <motion.div
@@ -45,20 +94,11 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             <ArrowLeft className="w-4 h-4" />
             New Analysis
           </button>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSendOpen(true)}
-              className="neon-glow-btn font-display font-semibold text-sm px-4 py-2 rounded-lg inline-flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Send SOL
-            </button>
-            <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
-              <span className="font-mono text-xs text-primary">
-                {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
+            <span className="font-mono text-xs text-primary">
+              {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+            </span>
           </div>
         </motion.div>
 
@@ -148,7 +188,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
           <p className="text-sm text-muted-foreground">{riskBlock.note}</p>
         </motion.div>
 
-        {/* Collateral returns table */}
+        {/* Collateral returns table — selectable rows */}
         {riskBlock.returns.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -160,6 +200,9 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
               <h3 className="font-display font-semibold text-sm uppercase tracking-wide text-muted-foreground">
                 Projected Returns by Collateral
               </h3>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                Select a collateral to transfer funds
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -176,29 +219,137 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                   </tr>
                 </thead>
                 <tbody>
-                  {riskBlock.returns.map((row) => (
-                    <tr key={row.collateral} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="px-5 py-3 font-mono font-semibold text-primary">
-                        {row.collateral}
-                      </td>
-                      <td className="px-5 py-3 font-mono">{row.oneMonth}</td>
-                      <td className="px-5 py-3 font-mono">{row.threeMonth}</td>
-                      <td className="px-5 py-3 font-mono">{row.sixMonth}</td>
-                      <td className="px-5 py-3 font-mono neon-text">{row.twelveMonth}</td>
-                    </tr>
-                  ))}
+                  {riskBlock.returns.map((row) => {
+                    const isSelected = selectedCollateral?.collateral === row.collateral;
+                    return (
+                      <tr
+                        key={row.collateral}
+                        onClick={() => handleRowSelect(row)}
+                        className={`border-b border-border/50 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
+                            : "hover:bg-secondary/30"
+                        }`}
+                      >
+                        <td className="px-5 py-3 font-mono font-semibold text-primary flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full border-2 transition-colors ${
+                            isSelected ? "bg-primary border-primary" : "border-muted-foreground"
+                          }`} />
+                          {row.collateral}
+                        </td>
+                        <td className="px-5 py-3 font-mono">{row.oneMonth}</td>
+                        <td className="px-5 py-3 font-mono">{row.threeMonth}</td>
+                        <td className="px-5 py-3 font-mono">{row.sixMonth}</td>
+                        <td className="px-5 py-3 font-mono neon-text">{row.twelveMonth}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {/* Transfer form — appears when a row is selected */}
+            <AnimatePresence>
+              {selectedCollateral && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden border-t border-border"
+                >
+                  <div className="p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-primary" />
+                      <h4 className="font-display font-semibold text-sm">
+                        Transfer <span className="neon-text">{selectedCollateral.collateral}</span>
+                      </h4>
+                    </div>
+
+                    {txStatus === "success" ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-4 space-y-3"
+                      >
+                        <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
+                        <p className="font-display font-semibold">
+                          {amount} SOL transferred!
+                        </p>
+                        <a
+                          href={explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-mono"
+                        >
+                          View on Solana Explorer
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </motion.div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-mono text-muted-foreground mb-1">
+                            Recipient Address
+                          </label>
+                          <input
+                            type="text"
+                            value={recipientAddress}
+                            onChange={(e) => setRecipientAddress(e.target.value)}
+                            placeholder="Solana wallet address"
+                            disabled={txStatus === "sending"}
+                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-muted-foreground mb-1">
+                            Amount (SOL)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="0.00"
+                            disabled={txStatus === "sending"}
+                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            onClick={handleTransfer}
+                            disabled={txStatus === "sending" || !recipientAddress || !amount}
+                            className="w-full neon-glow-btn font-display font-semibold px-4 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {txStatus === "sending" ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4" />
+                                Transfer
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {txStatus === "error" && (
+                      <div className="flex items-center gap-2 text-destructive text-sm font-mono">
+                        <AlertCircle className="w-4 h-4" />
+                        {errorMsg}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </div>
-
-      <SendTransaction
-        open={sendOpen}
-        onClose={() => setSendOpen(false)}
-        walletAddress={walletAddress}
-      />
     </motion.div>
   );
 }
