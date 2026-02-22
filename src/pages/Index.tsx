@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import IdentityGateway from "@/components/IdentityGateway";
 import TheaterLoading from "@/components/TheaterLoading";
 import TrustScoreDashboard from "@/components/TrustScoreDashboard";
+import LenderPage from "@/components/LenderPage";
 import {
   fetchWalletTransactions,
   fetchRiskBlock,
@@ -12,7 +13,7 @@ import {
   type RiskBlockResponse,
 } from "@/lib/api";
 
-type Screen = "gateway" | "loading" | "dashboard";
+type Screen = "gateway" | "loading" | "dashboard" | "lender";
 
 const Index = () => {
   const [screen, setScreen] = useState<Screen>("gateway");
@@ -42,6 +43,11 @@ const Index = () => {
     setScreen("dashboard");
   }, []);
 
+  const handleLend = useCallback((wallet: string) => {
+    setWalletAddress(wallet);
+    setScreen("lender");
+  }, []);
+
   const handleReset = useCallback(() => {
     setScreen("gateway");
   }, []);
@@ -49,7 +55,7 @@ const Index = () => {
   return (
     <AnimatePresence mode="wait">
       {screen === "gateway" && (
-        <IdentityGateway key="gateway" onCalculate={handleCalculate} />
+        <IdentityGateway key="gateway" onCalculate={handleCalculate} onLend={handleLend} />
       )}
       {screen === "loading" && (
         <TheaterLoading key="loading" onComplete={handleLoadingComplete} />
@@ -62,6 +68,9 @@ const Index = () => {
           riskBlock={riskBlock}
           onReset={handleReset}
         />
+      )}
+      {screen === "lender" && (
+        <LenderPage key="lender" walletAddress={walletAddress} onBack={handleReset} />
       )}
     </AnimatePresence>
   );

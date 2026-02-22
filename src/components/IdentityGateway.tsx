@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Wallet, Github, ArrowRight, Zap } from "lucide-react";
+import { Wallet, Github, ArrowRight, Zap, HandCoins, TrendingUp } from "lucide-react";
 import { connectPhantom, getPhantomProvider } from "@/lib/solana";
 
 interface Props {
   onCalculate: (wallet: string, socialUrl: string) => void;
+  onLend: (wallet: string) => void;
 }
 
-export default function IdentityGateway({ onCalculate }: Props) {
+export default function IdentityGateway({ onCalculate, onLend }: Props) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [role, setRole] = useState<null | "borrower" | "lender">(null);
   const [socialUrl, setSocialUrl] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [walletError, setWalletError] = useState("");
@@ -119,7 +121,36 @@ export default function IdentityGateway({ onCalculate }: Props) {
                   </button>
                 </div>
               </div>
+            ) : role === null ? (
+              /* Role selection */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto"
+              >
+                <button
+                  onClick={() => setRole("borrower")}
+                  className="flex-1 glass-card neon-border rounded-2xl p-6 text-left hover:bg-primary/5 transition-all group"
+                >
+                  <TrendingUp className="w-8 h-8 text-primary mb-3" />
+                  <h3 className="font-display font-bold text-lg mb-1">Become a Borrower</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Get under-collateralized loans based on your on-chain reputation.
+                  </p>
+                </button>
+                <button
+                  onClick={() => onLend(walletAddress)}
+                  className="flex-1 glass-card neon-border rounded-2xl p-6 text-left hover:bg-primary/5 transition-all group"
+                >
+                  <HandCoins className="w-8 h-8 text-primary mb-3" />
+                  <h3 className="font-display font-bold text-lg mb-1">Become a Lender</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Earn yield by lending your SOL to verified borrowers.
+                  </p>
+                </button>
+              </motion.div>
             ) : (
+              /* Borrower flow — social URL + calculate */
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
