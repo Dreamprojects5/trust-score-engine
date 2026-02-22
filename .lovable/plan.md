@@ -1,43 +1,70 @@
 
 
-## Add Demo Mode for End-to-End Testing Without Phantom Wallet
+## Role Selection After Wallet Connection
 
-Since Phantom wallet isn't available in the preview browser, we need a demo bypass to test the full pledge flow.
+### Overview
+After a successful wallet connection, instead of immediately showing the social URL input and "Calculate Trust Score" button, we'll show a role selection screen with two options: **Borrower** and **Lender**. Each role leads to a different flow.
 
-### What will change
+### Flow
 
-**1. IdentityGateway.tsx -- Add "Demo Mode" button**
-- Add a second button below "Connect Phantom" labeled "Try Demo" (or similar)
-- Clicking it sets a mock wallet address (e.g. `"DemoWa11etXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"`) and proceeds directly to `onCalculate` with mock data
-- This lets you skip the Phantom connection entirely
-
-**2. TrustScoreDashboard.tsx -- Mock the pledge API call**
-- In `handleRequest`, when the POST to `/api/wallet/transactions` fails (backend unreachable), instead of showing an error, simulate a successful response with a mock transaction signature
-- This way "Confirm & Request" will show the success message with the treasury transfer text even without a running backend
-
-### Flow after changes
-
-1. Landing page shows "Connect Phantom" and a new "Try Demo" link
-2. Click "Try Demo" -- skips wallet, goes straight to loading then dashboard
-3. Balance shows 10.0000 SOL (mock fallback)
-4. Select a collateral row (e.g. SOL), set percentage to 25%
-5. Click "Request" -- confirmation popup appears showing 2.5000 SOL
-6. Click "Confirm & Request" -- mock success triggers
-7. Success message shows: "2.5000 SOL has been added to your wallet" and "Your pledge of 2.5000 SOL in SOL has been transferred into our protocol's treasury"
-
-### Technical details
-
-**IdentityGateway.tsx** (below the Connect Phantom button area, around line 101-113):
-- Add a text button: `<button onClick={() => onCalculate("DemoWa11et...", "")}>Try Demo</button>` styled as a subtle link
-
-**TrustScoreDashboard.tsx** (`handleRequest`, lines 73-91):
-- Wrap the catch block to fall back to a mock success instead of error:
-```ts
-catch (err: any) {
-  // Mock success for demo mode
-  setTxSignature("DEMO_TX_" + Date.now());
-  setTxStatus("success");
-}
+```text
+Connect Wallet
+      |
+      v
+ Role Selection
+ /            \
+Borrower     Lender
+ |              |
+ v              v
+Current flow   New Lender Page
+(social URL +  (slider to pick %
+Trust Score)    of wallet to lend,
+                amount display,
+                confirm button)
 ```
 
-This gives a complete testable flow without any external dependencies.
+### Changes
+
+#### 1. IdentityGateway.tsx - Add role selection step
+- Add a new state `role` with values `null | "borrower" | "lender"`
+- After wallet connects, instead of showing the social URL input, show two large cards:
+  - **Become a Borrower** - with a brief description ("Get under-collateralized loans based on your on-chain reputation")
+  - **Become a Lender** - with a brief description ("Earn yield by lending your SOL to verified borrowers")
+- Clicking **Borrower** shows the existing social URL input + "Calculate Trust Score" flow
+- Clicking **Lender** calls a new `onLend` callback prop
+
+#### 2. Index.tsx - Add lender screen
+- Add `"lender"` to the `Screen` type: `"gateway" | "loading" | "dashboard" | "lender"`
+- Pass a new `onLend` callback to `IdentityGateway` that sets screen to `"lender"`
+- Render a new `LenderPage` component when screen is `"lender"`
+
+#### 3. New component: LenderPage.tsx
+- Accepts `walletAddress` and `onBack` props
+- Fetches wallet balance (reusing `getBalance` from solana.ts)
+- Shows a UI similar to the borrower's pledge form:
+  - Percentage slider (0-100%) with quick-select buttons (0%, 25%, 50%, 75%, 100%)
+  - Read-only amount field showing calculated SOL amount
+  - "Confirm Lending" button
+- On confirm, shows a success message with the amount committed
+- Styled consistently with existing glass-card / neon-border design
+
+### Technical Details
+
+**IdentityGateway.tsx:**
+- New state: `const [role, setRole] = useState<null | "borrower" | "lender">(null)`
+- New prop: `onLend: (wallet: string) => void`
+- After wallet connects, render role selection cards when `role === null`
+- When `role === "borrower"`, show existing social URL + calculate flow
+- When `role === "lender"`, call `onLend(walletAddress)`
+
+**Index.tsx:**
+- Screen type becomes `"gateway" | "loading" | "dashboard" | "lender"`
+- New handler: `handleLend` sets wallet address and screen to `"lender"`
+- Render `<LenderPage>` when screen is `"lender"`
+
+**LenderPage.tsx (new file):**
+- Reuses `getBalance` from `@/lib/solana`
+- Same slider pattern as TrustScoreDashboard's pledge form
+- Shows wallet balance, percentage slider, quick-select buttons, calculated amount
+- Confirm button with loading/success states
+- Back button to return to gateway
