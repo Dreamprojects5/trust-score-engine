@@ -26,7 +26,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
   const [errorMsg, setErrorMsg] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [receivedAmount, setReceivedAmount] = useState(0);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "history">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "loans" | "transactions">("dashboard");
 
   const pledgeAmount = walletBalance > 0 && percentage ? (walletBalance * parseFloat(percentage || "0")) / 100 : 0;
 
@@ -136,10 +136,16 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                 Dashboard
               </button>
               <button
-                onClick={() => setActiveTab("history")}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${activeTab === "history" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => setActiveTab("loans")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${activeTab === "loans" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Loan History
+              </button>
+              <button
+                onClick={() => setActiveTab("transactions")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${activeTab === "transactions" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Transactions
               </button>
             </div>
             <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
@@ -337,8 +343,9 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
               </motion.div>
             )}
           </>
+        ) : activeTab === "loans" ? (
+          <TransactionHistory walletAddress={walletAddress} />
         ) : (
-          /* Loan History tab */
           <TransactionHistory walletAddress={walletAddress} />
         )}
       </div>
