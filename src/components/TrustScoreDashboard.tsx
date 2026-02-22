@@ -92,7 +92,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
     }
   };
 
-  const explorerUrl = txSignature
+  const explorerUrl = txSignature && !txSignature.startsWith("DEMO_TX_")
     ? `https://explorer.solana.com/tx/${txSignature}?cluster=${NETWORK}`
     : "";
 
