@@ -26,7 +26,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
   const pledgeAmount = walletBalance > 0 && percentage ? (walletBalance * parseFloat(percentage || "0")) / 100 : 0;
 
   useEffect(() => {
-    getBalance(walletAddress).then(setWalletBalance).catch(() => setWalletBalance(0));
+    getBalance(walletAddress).then(setWalletBalance).catch(() => setWalletBalance(10));
   }, [walletAddress]);
 
   const riskColor =
