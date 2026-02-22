@@ -1,0 +1,52 @@
+const API_BASE = "http://localhost:8080";
+
+export interface WalletMetrics {
+  transactionCount: number;
+  riskLevel: string;
+}
+
+export interface RiskBlockResponse {
+  blockName: string;
+  factorRange: string;
+  eligibleAssets: string;
+  note: string;
+  returns: CollateralReturn[];
+}
+
+export interface CollateralReturn {
+  collateral: string;
+  oneMonth: string;
+  threeMonth: string;
+  sixMonth: string;
+  twelveMonth: string;
+}
+
+export async function fetchWalletTransactions(address: string): Promise<WalletMetrics> {
+  const res = await fetch(`${API_BASE}/api/wallet/${address}/transactions`);
+  if (!res.ok) throw new Error("Failed to fetch wallet data");
+  return res.json();
+}
+
+export async function fetchRiskBlock(profile: "LOW" | "MEDIUM" | "HIGH"): Promise<RiskBlockResponse> {
+  const res = await fetch(`${API_BASE}/api/risk/${profile}`);
+  if (!res.ok) throw new Error("Failed to fetch risk data");
+  return res.json();
+}
+
+// Mock fallbacks for demo when backend is unavailable
+export const MOCK_WALLET_METRICS: WalletMetrics = {
+  transactionCount: 847,
+  riskLevel: "MEDIUM",
+};
+
+export const MOCK_RISK_BLOCK: RiskBlockResponse = {
+  blockName: "Tier B — Growth",
+  factorRange: "0.45 – 0.70",
+  eligibleAssets: "SOL, mSOL, JitoSOL, USDC",
+  note: "Eligible for under-collateralized lending up to 1.8x with active DeFi history.",
+  returns: [
+    { collateral: "SOL", oneMonth: "2.1%", threeMonth: "6.8%", sixMonth: "14.2%", twelveMonth: "31.5%" },
+    { collateral: "mSOL", oneMonth: "2.8%", threeMonth: "8.1%", sixMonth: "17.0%", twelveMonth: "36.2%" },
+    { collateral: "USDC", oneMonth: "1.2%", threeMonth: "3.6%", sixMonth: "7.4%", twelveMonth: "15.1%" },
+  ],
+};
