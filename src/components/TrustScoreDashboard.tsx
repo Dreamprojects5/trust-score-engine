@@ -391,7 +391,10 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                   <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
                   <h3 className="font-display text-xl font-bold">Request Successful!</h3>
                   <p className="font-mono text-sm text-muted-foreground">
-                    {pledgeAmount.toFixed(4)} SOL of {selectedCollateral?.collateral} pledged
+                    {pledgeAmount.toFixed(4)} SOL has been added to your wallet.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your pledge of {pledgeAmount.toFixed(4)} SOL in {selectedCollateral?.collateral} has been transferred into our protocol's treasury.
                   </p>
                   {txSignature && (
                     <a
