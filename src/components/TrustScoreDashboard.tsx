@@ -310,23 +310,43 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                         )}
                       </motion.div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-mono text-muted-foreground mb-1">
-                            Pledge Percentage (%)
-                          </label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-mono text-muted-foreground">
+                              Pledge Percentage
+                            </label>
+                            <span className="font-mono text-sm font-bold neon-text">{percentage || "0"}%</span>
+                          </div>
                           <input
-                            type="number"
-                            step="1"
-                            min="1"
+                            type="range"
+                            min="0"
                             max="100"
-                            value={percentage}
+                            step="1"
+                            value={percentage || "0"}
                             onChange={(e) => setPercentage(e.target.value)}
-                            placeholder="e.g. 25"
                             disabled={txStatus === "sending"}
-                            className="w-full glass-card neon-border rounded-lg px-3 py-2.5 bg-secondary text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-secondary accent-primary disabled:opacity-50"
                           />
+                          <div className="flex justify-between mt-1">
+                            {[0, 25, 50, 75, 100].map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setPercentage(String(v))}
+                                disabled={txStatus === "sending"}
+                                className={`text-xs font-mono px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${
+                                  percentage === String(v)
+                                    ? "text-primary bg-primary/10"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                {v}%
+                              </button>
+                            ))}
+                          </div>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-mono text-muted-foreground mb-1">
                             Amount (SOL)
@@ -356,6 +376,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
                               </>
                             )}
                           </button>
+                        </div>
                         </div>
                       </div>
                     )}
