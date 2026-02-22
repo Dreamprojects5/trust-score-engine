@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "lucide-react";
+import { Shield, TrendingUp, Coins, AlertTriangle, ArrowLeft, Send, Loader2, CheckCircle2, ExternalLink, AlertCircle, Wallet } from "lucide-react";
 import type { WalletMetrics, RiskBlockResponse, CollateralReturn } from "@/lib/api";
 import { getBalance, NETWORK } from "@/lib/solana";
 
@@ -108,11 +108,19 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             <ArrowLeft className="w-4 h-4" />
             New Analysis
           </button>
-          <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
-            <span className="font-mono text-xs text-primary">
-              {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
+              <Wallet className="w-4 h-4 text-primary" />
+              <span className="font-mono text-sm font-bold neon-text">
+                {walletBalance > 0 ? `${walletBalance.toFixed(4)} SOL` : "Loading..."}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse-neon" />
+              <span className="font-mono text-xs text-primary">
+                {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+              </span>
+            </div>
           </div>
         </motion.div>
 
