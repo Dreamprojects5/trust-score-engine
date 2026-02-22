@@ -110,6 +110,14 @@ export default function IdentityGateway({ onCalculate }: Props) {
                 {walletError && (
                   <p className="text-destructive text-sm font-mono">{walletError}</p>
                 )}
+                <div>
+                  <button
+                    onClick={() => onCalculate("DemoWa11etXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "")}
+                    className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+                  >
+                    Try Demo Mode
+                  </button>
+                </div>
               </div>
             ) : (
               <motion.div
