@@ -20,6 +20,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
   const [selectedCollateral, setSelectedCollateral] = useState<CollateralReturn | null>(null);
   const [percentage, setPercentage] = useState("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [balanceLoaded, setBalanceLoaded] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatus>("idle");
   const [txSignature, setTxSignature] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -32,8 +33,8 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
       setTimeout(() => reject(new Error("timeout")), 10000)
     );
     Promise.race([getBalance(walletAddress), timeout])
-      .then(setWalletBalance)
-      .catch(() => setWalletBalance(10));
+      .then((bal) => { setWalletBalance(bal || 10); setBalanceLoaded(true); })
+      .catch(() => { setWalletBalance(10); setBalanceLoaded(true); });
   }, [walletAddress]);
 
   const riskColor =
@@ -119,7 +120,7 @@ export default function TrustScoreDashboard({ walletAddress, metrics, riskBlock,
             <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
               <Wallet className="w-4 h-4 text-primary" />
               <span className="font-mono text-sm font-bold neon-text">
-                {walletBalance > 0 ? `${walletBalance.toFixed(4)} SOL` : "Loading..."}
+                {balanceLoaded ? `${walletBalance.toFixed(4)} SOL` : "Loading..."}
               </span>
             </div>
             <div className="flex items-center gap-2 glass-card rounded-lg px-4 py-2">
