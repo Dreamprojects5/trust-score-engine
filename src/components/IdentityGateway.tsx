@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wallet, Github, ArrowRight, Zap } from "lucide-react";
+import { connectPhantom, getPhantomProvider } from "@/lib/solana";
 
 interface Props {
   onCalculate: (wallet: string, socialUrl: string) => void;
@@ -10,14 +11,22 @@ export default function IdentityGateway({ onCalculate }: Props) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [socialUrl, setSocialUrl] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [walletError, setWalletError] = useState("");
 
   const connectWallet = async () => {
     setConnecting(true);
-    // Simulate Phantom wallet connection
-    await new Promise((r) => setTimeout(r, 1200));
-    const mockAddress = "7xKX" + Math.random().toString(36).slice(2, 8) + "...q9Fp";
-    setWalletAddress(mockAddress);
-    setConnecting(false);
+    setWalletError("");
+    try {
+      const address = await connectPhantom();
+      setWalletAddress(address);
+    } catch (err: any) {
+      if (!getPhantomProvider()) {
+        window.open("https://phantom.app/", "_blank");
+      }
+      setWalletError(err?.message || "Failed to connect wallet");
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const truncated = walletAddress
@@ -89,14 +98,19 @@ export default function IdentityGateway({ onCalculate }: Props) {
             className="space-y-6"
           >
             {!walletAddress ? (
-              <button
-                onClick={connectWallet}
-                disabled={connecting}
-                className="neon-glow-btn font-display font-semibold text-lg px-8 py-4 rounded-xl inline-flex items-center gap-3 disabled:opacity-60"
-              >
-                <Wallet className="w-5 h-5" />
-                {connecting ? "Connecting..." : "Connect Phantom"}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={connectWallet}
+                  disabled={connecting}
+                  className="neon-glow-btn font-display font-semibold text-lg px-8 py-4 rounded-xl inline-flex items-center gap-3 disabled:opacity-60"
+                >
+                  <Wallet className="w-5 h-5" />
+                  {connecting ? "Connecting..." : "Connect Phantom"}
+                </button>
+                {walletError && (
+                  <p className="text-destructive text-sm font-mono">{walletError}</p>
+                )}
+              </div>
             ) : (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
