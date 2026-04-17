@@ -4,6 +4,8 @@
 
 VouchAI is a decentralized lending protocol on the Solana blockchain that leverages AI-driven on-chain reputation analysis to offer under-collateralized loans. By scanning your Solana history, DeFi behavior, and social graph, VouchAI generates a real-time credit score, bridging the gap between TradFi risk assessment and Web3 accessibility without relying on traditional credit bureaus.
 
+🏆 Awarded **3rd Place in the Solana Challenge at HackEurope 2026 (Dublin)** — one of Europe’s largest hackathons, gathering 1,000+ builders across multiple cities.
+
 ## 🚀 The Problem We Solve
 DeFi lending is currently broken due to:
 - **150% Over-collateralization**: Current protocols lock up billions in unproductive capital by treating all users as high-risk strangers.
